@@ -11,11 +11,13 @@
         @dragexit.prevent='dragging = false'
     >
         <span v-text='props.modelValue'/>
-    </div>
 
-    <blocks
-        v-if='modelValue.self'
-    />
+        <slot
+            v-if='modelValue.self'
+            name='block'
+            :node='modelValue.self'
+        />
+    </div>
 </template>
 
 <script setup>

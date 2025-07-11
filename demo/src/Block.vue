@@ -6,6 +6,7 @@
         }'
         :style='{
             "background-color": props.disabled ? "var(--tblr-gray-100)" : "var(--tblr-white)",
+             "width": props.width ? props.width + "px" : "100%",
         }'
         :draggable='props.draggable'
     >
@@ -55,6 +56,9 @@ const props = defineProps({
     draggable: {
         type: Boolean,
         default: true
+    },
+    width: {
+        type: Number,
     },
     disabled: {
         type: Boolean,
