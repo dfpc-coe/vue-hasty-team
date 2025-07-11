@@ -18,22 +18,25 @@
                 "transform": `scale(${zoom})`,
             }'
 
-            @dragover.prevent
-            @drop.self.prevent='droppedRoot'
-            @dragenter.self.prevent='dragging = true'
-            @dragexit.self.prevent='dragging = false'
+            @dragover.prevent='dragOverContainer'
+            @drop.prevent='droppedRoot'
+            @dragenter.prevent='dragEnterContainer'
+            @dragexit.prevent='dragExitContainer'
         >
             <div class='d-flex align-items-center justify-content-center'>
-                <slot
+                <div
                     v-if='modelValue.self'
-                    name='block'
-                    @dragenter.precent.stop='over.add(modelValue.self.id)'
+                    @dragenter.prevent.stop='over.add(modelValue.self.id)'
                     @dragover.prevent.stop='over.add(modelValue.self.id)'
                     @dragexit.prevent.stop='over.delete(modelValue.self.id)'
                     @drop.prevent.stop='droppedNode'
-                    :node='modelValue.self'
-                    :dragover='over.has(modelValue.self.id)'
-                />
+                >
+                    <slot
+                        name='block'
+                        :node='modelValue.self'
+                        :dragover='over.has(modelValue.self.id)'
+                    />
+                </div>
             </div>
         </div>
 
@@ -41,14 +44,14 @@
             v-if='props.debug'
             class='position-absolute bottom-0 start-0 end-0 mx-3'
         >
-            <pre v-text='over'/>
-            <pre v-text='JSON.stringify(props.modelValue)'/>
+            <pre v-text='over' />
+            <pre v-text='JSON.stringify(props.modelValue)' />
         </div>
     </div>
 </template>
 
 <script setup>
-import { onMounted, ref, h, useTemplateRef } from 'vue';
+import { onMounted, ref, useTemplateRef } from 'vue';
 
 const zoom = ref(1);
 const dragging = ref(false);
@@ -85,8 +88,16 @@ onMounted(() => {
     }
 });
 
-function log() {
-    console.error('I WAS FIRED');
+function dragOverContainer() {
+    // Container receives drag over events
+}
+
+function dragEnterContainer() {
+    dragging.value = true;
+}
+
+function dragExitContainer() {
+    dragging.value = false;
 }
 
 function wheel(event) {
@@ -97,18 +108,18 @@ function wheel(event) {
 /**
  * Fired if something is dropped on a specific node
  */
-function droppedNode(event) {
+function droppedNode() {
     dragging.value = false;
-    console.error('droppedNode');
 }
 
 /**
  * Fired if something is dropped on the container but not a specific node
  */
-function droppedRoot(event) {
-console.error('ROOT');
-    dragging.value = false;
+function droppedRoot() {
+    // Only handle the drop if there's no child block
+    // If there's a child block, its event handlers with .stop should prevent this from firing
     if (!props.modelValue.self) {
+        dragging.value = false;
         emit('drop', props.modelValue);
     }
 }

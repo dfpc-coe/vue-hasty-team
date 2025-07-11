@@ -5,7 +5,7 @@
             style='
                 width: 300px;
              '
-         >
+        >
             <div class='container'>
                 <div class='row g-2 mt-2 align-items-center'>
                     <div class='col-12'>
@@ -13,11 +13,14 @@
                             title='New Team'
                             description='Container for multipe users or equipment'
                             :disabled='disabled.has("team")'
-                            @dragstart="dragStart('team')"
-                            @dragend="dragEnd('team')"
+                            @dragstart='(event) => handleDragStart(event, &apos;team&apos;)'
+                            @dragend='(event) => handleDragEnd(event, &apos;team&apos;)'
                         >
                             <template #icon>
-                                <IconUsers :size='24' stroke='1' />
+                                <IconUsers
+                                    :size='24'
+                                    stroke='1'
+                                />
                             </template>
                         </HastyBlock>
                     </div>
@@ -26,11 +29,14 @@
                             title='New User'
                             description='Known or custom individual'
                             :disabled='disabled.has("user")'
-                            @dragstart="dragStart('user')"
-                            @dragend="dragEnd('user')"
+                            @dragstart='(event) => handleDragStart(event, &apos;user&apos;)'
+                            @dragend='(event) => handleDragEnd(event, &apos;user&apos;)'
                         >
                             <template #icon>
-                                <IconUser :size='24' stroke='1' />
+                                <IconUser
+                                    :size='24'
+                                    stroke='1'
+                                />
                             </template>
                         </HastyBlock>
                     </div>
@@ -47,29 +53,35 @@
             <HastyTeam
                 v-model='tree'
                 :debug='true'
-                @drop="modifyTree"
+                @drop='modifyTree'
             >
-                <template #block=blockProps>
+                <template #block='blockProps'>
                     <HastyBlock
-                        v-if='blockProps.node.type = "team"'
+                        v-if='blockProps.node.type === "team"'
                         :width='300'
                         :dragover='blockProps.dragover'
                         title='New Team'
                         description='Container for multipe users or equipment'
                     >
                         <template #icon>
-                            <IconUsers :size='24' stroke='1' />
+                            <IconUsers
+                                :size='24'
+                                stroke='1'
+                            />
                         </template>
                     </HastyBlock>
                     <HastyBlock
-                        v-else-if='blockProps.node.type = "user"'
+                        v-else-if='blockProps.node.type === "user"'
                         :width='300'
                         title='New User'
                         :dragover='blockProps.dragover'
                         description='Known or custom individual'
                     >
                         <template #icon>
-                            <IconUsers :size='24' stroke='1' />
+                            <IconUser
+                                :size='24'
+                                stroke='1'
+                            />
                         </template>
                     </HastyBlock>
                 </template>
@@ -79,7 +91,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, useTemplateRef } from 'vue'
+import { ref } from 'vue'
 import '@tabler/core/dist/js/tabler.min.js';
 import '@tabler/core/dist/css/tabler.min.css';
 import HastyBlock from './Block.vue';
@@ -93,12 +105,14 @@ const dragging = ref(null);
 const disabled = ref(new Set());
 const tree = ref({});
 
-function dragStart(id) {
+function handleDragStart(event, id) {
+    event.dataTransfer.setData('text/plain', id);
+    event.dataTransfer.effectAllowed = 'move';
     dragging.value = id;
-    disabled.value.add(id)
+    disabled.value.add(id);
 }
 
-function dragEnd(id) {
+function handleDragEnd(event, id) {
     dragging.value = null;
     disabled.value.delete(id);
 }
