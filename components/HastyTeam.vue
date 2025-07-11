@@ -1,6 +1,7 @@
 <template>
     <div
         ref='container'
+        class='position-relative'
         style='
             height: 100%;
             width: 100%;
@@ -10,13 +11,20 @@
         @dragenter.prevent='dragging = true'
         @dragexit.prevent='dragging = false'
     >
-        <span v-text='props.modelValue'/>
+        <div class='d-flex align-items-center justify-content-center'>
+            <slot
+                v-if='modelValue.self'
+                name='block'
+                :node='modelValue.self'
+            />
+        </div>
 
-        <slot
-            v-if='modelValue.self'
-            name='block'
-            :node='modelValue.self'
+        <div
+            v-if='props.debug'
+            class='pre position absolute bottom-0 start-0 end-0'
+            v-text='JSON.stringify(props.tree)'
         />
+
     </div>
 </template>
 
@@ -30,6 +38,10 @@ const props = defineProps({
     modelValue: {
         type: Object,
         required: true
+    },
+    debug: {
+        type: Boolean,
+        default: false
     },
     spacing_x: {
         type: Number,

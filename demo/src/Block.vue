@@ -21,10 +21,7 @@
             <span class='card-title' v-text='props.title'/>
 
             <div class='ms-auto'>
-                <img
-                    width='32'
-                    :src='props.image'
-                >
+                <slot name='icon'/>
             </div>
         </div>
         <div class='card-body'>
@@ -41,10 +38,6 @@ import {
 } from '@tabler/icons-vue'
 
 const props = defineProps({
-    image: {
-        type: String,
-        required: true
-    },
     title: {
         type: String,
         default: 'Title'
