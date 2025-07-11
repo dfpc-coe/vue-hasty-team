@@ -1,37 +1,59 @@
 <template>
     <div
-        ref='container'
-        class='position-relative'
-        style='
-            height: 100%;
-            width: 100%;
-        '
-        @drop.prevent='dropped'
-        @dragover.prevent='dragover'
-        @dragenter.prevent='dragging = true'
-        @dragexit.prevent='dragging = false'
+        ref='wheelContainer'
+        class='h-100 w-100 position-relative d-flex justify-content-center'
     >
-        <div class='d-flex align-items-center justify-content-center'>
-            <slot
-                v-if='modelValue.self'
-                name='block'
-                :node='modelValue.self'
-            />
+        <div
+            ref='container'
+            class='px-4 py-4'
+            :class='{
+                "border border-blue": dragging
+            }'
+            style='
+                transform-origin: 0% 0%;
+                height: 100%;
+                width: 100%;
+            '
+            :style='{
+                "transform": `scale(${zoom})`,
+            }'
+
+            @dragover.prevent
+            @drop.self.prevent='droppedRoot'
+            @dragenter.self.prevent='dragging = true'
+            @dragexit.self.prevent='dragging = false'
+        >
+            <div class='d-flex align-items-center justify-content-center'>
+                <slot
+                    v-if='modelValue.self'
+                    name='block'
+                    @dragenter.precent.stop='over.add(modelValue.self.id)'
+                    @dragover.prevent.stop='over.add(modelValue.self.id)'
+                    @dragexit.prevent.stop='over.delete(modelValue.self.id)'
+                    @drop.prevent.stop='droppedNode'
+                    :node='modelValue.self'
+                    :dragover='over.has(modelValue.self.id)'
+                />
+            </div>
         </div>
 
         <div
             v-if='props.debug'
-            class='pre position absolute bottom-0 start-0 end-0'
-            v-text='JSON.stringify(props.tree)'
-        />
-
+            class='position-absolute bottom-0 start-0 end-0 mx-3'
+        >
+            <pre v-text='over'/>
+            <pre v-text='JSON.stringify(props.modelValue)'/>
+        </div>
     </div>
 </template>
 
 <script setup>
 import { onMounted, ref, h, useTemplateRef } from 'vue';
 
+const zoom = ref(1);
 const dragging = ref(false);
+
+const wheelContainerRef = useTemplateRef('wheelContainer');
 const containerRef = useTemplateRef('container');
 
 const props = defineProps({
@@ -42,25 +64,18 @@ const props = defineProps({
     debug: {
         type: Boolean,
         default: false
-    },
-    spacing_x: {
-        type: Number,
-        default: 20
-    },
-    spacing_y: {
-        type: Number,
-        default: 80
     }
 });
 
 const emit = defineEmits(['update:modelValue', 'drop']);
 
-const loaded = ref(false);
-const active = ref(false);
+const over = ref(new Set());
 
 onMounted(() => {
-    if (!containerRef.value) throw new Error('Canvas element not found');
-    if (!loaded.value) loaded.value = true;
+    if (!containerRef.value) throw new Error('Container element not found');
+    if (!containerRef.value) throw new Error('WheelContainer element not found');
+
+    wheelContainerRef.value.addEventListener('wheel', wheel);
 
     if (!props.modelValue.self && !props.modelValue.children) {
         emit('update:modelValue', {
@@ -70,57 +85,31 @@ onMounted(() => {
     }
 });
 
-function dropped(event) {
+function log() {
+    console.error('I WAS FIRED');
+}
+
+function wheel(event) {
+    console.error('Wheeled', event);
+    zoom.value += event.wheelDelta * 0.001
+}
+
+/**
+ * Fired if something is dropped on a specific node
+ */
+function droppedNode(event) {
+    dragging.value = false;
+    console.error('droppedNode');
+}
+
+/**
+ * Fired if something is dropped on the container but not a specific node
+ */
+function droppedRoot(event) {
+console.error('ROOT');
+    dragging.value = false;
     if (!props.modelValue.self) {
         emit('drop', props.modelValue);
     }
 }
-
-function dragover(event) {
-
-}
 </script>
-
-<style scoped>
-
-.block{
-    position:absolute;
-    z-index:9
-}
-.indicator{
-    width:12px;
-    height:12px;
-    border-radius:60px;
-    background-color:#217ce8;
-    margin-top:-5px;
-    opacity:1;
-    transition:all .3s cubic-bezier(.05,.03,.35,1);
-    transform:scale(1);
-    position:absolute;
-    z-index:2
-}
-.invisible{
-    opacity:0!important;
-    transform:scale(0)
-}
-.indicator:after{
-    content:"";
-    display:block;
-    width:12px;
-    height:12px;
-    background-color:#217ce8;
-    transform:scale(1.7);
-    opacity:.2;
-    border-radius:60px
-}
-.arrowblock{
-    position:absolute;
-    width:100%;
-    overflow:visible;
-    pointer-events:none
-}
-.arrowblock svg{
-    width: -webkit-fill-available;
-    overflow: visible;
-}
-</style>

@@ -3,7 +3,9 @@
         class='card'
         :class='{
             "cursor-move": props.draggable,
+             "border border-blue": props.dragover && !props.disabled,
         }'
+
         :style='{
             "background-color": props.disabled ? "var(--tblr-gray-100)" : "var(--tblr-white)",
              "width": props.width ? props.width + "px" : "100%",
@@ -33,6 +35,7 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import {
     IconGripVertical
 } from '@tabler/icons-vue'
@@ -45,6 +48,10 @@ const props = defineProps({
     description: {
         type: String,
         default: 'Description'
+    },
+    dragover: {
+        type: Boolean,
+        default: false
     },
     draggable: {
         type: Boolean,

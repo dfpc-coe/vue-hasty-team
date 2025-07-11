@@ -53,6 +53,7 @@
                     <HastyBlock
                         v-if='blockProps.node.type = "team"'
                         :width='300'
+                        :dragover='blockProps.dragover'
                         title='New Team'
                         description='Container for multipe users or equipment'
                     >
@@ -64,6 +65,7 @@
                         v-else-if='blockProps.node.type = "user"'
                         :width='300'
                         title='New User'
+                        :dragover='blockProps.dragover'
                         description='Known or custom individual'
                     >
                         <template #icon>
