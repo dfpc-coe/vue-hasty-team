@@ -1,24 +1,14 @@
-body, html {
+body, html, #app {
     margin: 0px;
     padding: 0px;
     overflow: hidden;
-    background-image: url(assets/tile.png);
+    background-image: url(/assets/tile.png);
     background-repeat: repeat;
     background-size: 30px 30px;
     background-color: #FBFBFB;
     height: 100%;
 }
-#navigation {
-    height: 71px;
-    background-color: #FFF;
-    border: 1px solid #E8E8EF;
-    width: 100%;
-    display: table;
-    box-sizing: border-box;
-    position: fixed;
-    top: 0;
-    z-index: 9
-}
+
 #back {
     width: 40px;
     height: 40px;
@@ -30,9 +20,11 @@ body, html {
     margin-top: 12px;
     margin-right: 10px
 }
+
 #back img {
     margin-top: 13px;
 }
+
 #names {
     display: inline-block;
     vertical-align: top;
@@ -44,24 +36,20 @@ body, html {
     color: #393C44;
     margin-bottom: 0px;
 }
+
 #subtitle {
     font-family: Roboto;
     color: #808292;
     font-size: 14px;
     margin-top: 5px;
 }
+
 #leftside {
     display: inline-block;
     vertical-align: middle;
     margin-left: 20px;
 }
-#centerswitch {
-    position: absolute;
-    width: 222px;
-    left: 50%;
-    margin-left: -111px;
-    top: 15px;
-}
+
 #leftswitch {
     border: 1px solid #E8E8EF;
     background-color: #FBFBFB;
@@ -137,7 +125,6 @@ body, html {
     background-color: #FFF;
     border: 1px solid #E8E8EF;
     box-sizing: border-box;
-    padding-top: 85px;
     padding-left: 20px;
     height: 100%;
     position: absolute;
@@ -238,39 +225,7 @@ body, html {
     line-height: 48px;
     text-align: center;
 }
-#footer {
-    position: absolute;
-    left: 0;
-    padding-left: 20px;
-    line-height: 40px;
-    bottom: 0;
-    width: 362px;
-    border: 1px solid #E8E8EF;
-    height: 67px;
-    box-sizing: border-box;
-    background-color: #FFF;
-    font-family: Roboto;
-    font-size: 14px;
-}
-#footer a {
-    text-decoration: none;
-    color: #393C44;
-    transition: all .2s cubic-bezier(.05,.03,.35,1);
-}
-#footer a:hover {
-    opacity: .5;
-}
-#footer span {
-    color: #808292;
-}
-#footer p {
-    display: inline-block;
-    color: #808292;
-}
-#footer img {
-    margin-left: 5px;
-    margin-right: 5px;
-}
+
 .blockelem:first-child {
     margin-top: 20px
 }
@@ -300,10 +255,7 @@ body, html {
     margin-bottom: -14px;
     width: 15px;
 }
-#blocklist {
-    height: calc(100% - 220px);
-    overflow: auto;
-}
+
 #proplist {
     height: calc(100% - 305px);
     overflow: auto;
