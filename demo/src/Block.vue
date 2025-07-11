@@ -3,12 +3,12 @@
         class='card'
         :class='{
             "cursor-move": props.draggable,
-             "border border-blue": props.dragover && !props.disabled,
+            "border border-blue": props.dragover && !props.disabled,
         }'
 
         :style='{
             "background-color": props.disabled ? "var(--tblr-gray-100)" : "var(--tblr-white)",
-             "width": props.width ? props.width + "px" : "100%",
+            "width": props.width ? props.width + "px" : "100%",
         }'
         :draggable='props.draggable'
     >
@@ -20,22 +20,24 @@
                 class='me-2'
                 color='gray'
             />
-            <span class='card-title' v-text='props.title'/>
+            <span
+                class='card-title'
+                v-text='props.title'
+            />
 
             <div class='ms-auto'>
-                <slot name='icon'/>
+                <slot name='icon' />
             </div>
         </div>
         <div class='card-body'>
             <div>
-                <p v-text='props.description'/>
+                <p v-text='props.description' />
             </div>
         </div>
     </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
 import {
     IconGripVertical
 } from '@tabler/icons-vue'
