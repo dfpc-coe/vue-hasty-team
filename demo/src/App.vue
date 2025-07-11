@@ -101,12 +101,12 @@ const tree = ref({});
 
 function dragStart(id) {
     dragging.value = id;
-    disabled.add(id)
+    disabled.value.add(id)
 }
 
 function dragEnd(id) {
     dragging.value = null;
-    disabled.delete(id);
+    disabled.value.delete(id);
 }
 
 function modifyTree(node) {

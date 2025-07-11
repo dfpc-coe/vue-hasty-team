@@ -1,8 +1,11 @@
 <template>
     <div
-        class='card cursor-move'
+        class='card'
+        :class='{
+            "cursor-move": props.draggable,
+        }'
         :style='{
-            "background-color: var(--tblr-gray-300);": props.disabled,
+            "background-color": props.disabled ? "var(--tblr-gray-100)" : "var(--tblr-white)",
         }'
         :draggable='props.draggable'
     >
