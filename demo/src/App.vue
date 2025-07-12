@@ -120,8 +120,11 @@ function handleDragEnd(event, id) {
 
 function modifyTreeNode(node) {
     node.children.push({
-        id: crypto.randomUUID(),
-        type: dragging.value
+        self: {
+            id: crypto.randomUUID(),
+            type: dragging.value
+        },
+        children: []
     });
 }
 

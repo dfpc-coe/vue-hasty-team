@@ -38,54 +38,54 @@
                     />
                 </div>
             </div>
-            
+
             <!-- Arrow connections between parent and children -->
-            <div 
+            <div
                 v-if='modelValue.self && modelValue.children.length > 0'
                 class='d-flex align-items-center justify-content-center position-relative'
                 style='height: 60px; margin: 20px 0;'
             >
-                <svg 
-                    :width='containerWidth' 
+                <svg
+                    :width='containerWidth'
                     :height='60'
                     class='position-absolute'
                     style='top: 0; left: 50%; transform: translateX(-50%);'
                 >
                     <!-- Vertical line from parent -->
-                    <line 
-                        :x1='containerWidth / 2' 
-                        y1='0' 
-                        :x2='containerWidth / 2' 
-                        y2='30' 
-                        stroke='#6c757d' 
+                    <line
+                        :x1='containerWidth / 2'
+                        y1='0'
+                        :x2='containerWidth / 2'
+                        y2='30'
+                        stroke='#6c757d'
                         stroke-width='2'
                     />
-                    
+
                     <!-- Horizontal line connecting to all children -->
-                    <line 
+                    <line
                         v-if='modelValue.children.length > 1'
-                        :x1='childrenStartX' 
-                        y1='30' 
-                        :x2='childrenEndX' 
-                        y2='30' 
-                        stroke='#6c757d' 
+                        :x1='childrenStartX'
+                        y1='30'
+                        :x2='childrenEndX'
+                        y2='30'
+                        stroke='#6c757d'
                         stroke-width='2'
                     />
-                    
+
                     <!-- Vertical lines to each child -->
-                    <line 
+                    <line
                         v-for='(child, index) in modelValue.children'
                         :key='child.self.id'
-                        :x1='getChildLineX(index)' 
-                        y1='30' 
-                        :x2='getChildLineX(index)' 
-                        y2='60' 
-                        stroke='#6c757d' 
+                        :x1='getChildLineX(index)'
+                        y1='30'
+                        :x2='getChildLineX(index)'
+                        y2='60'
+                        stroke='#6c757d'
                         stroke-width='2'
                     />
-                    
+
                     <!-- Arrow heads pointing to children -->
-                    <polygon 
+                    <polygon
                         v-for='(child, index) in modelValue.children'
                         :key='child.self.id + "-arrow"'
                         :points='getArrowPoints(index)'
@@ -93,7 +93,7 @@
                     />
                 </svg>
             </div>
-            
+
             <div class='d-flex align-items-center justify-content-center'>
                 <div
                     v-for='child in modelValue.children'
@@ -246,5 +246,15 @@ function droppedRoot() {
     }
 }
 
-// Removed unused function
+function searchTreeById(node, id) {
+    if (!node || !node.self) return null;
+    if (node[node.self.id] === id) return node;
+    if (Array.isArray(node[childrenKey])) {
+        for (const child of node[childrenKey]) {
+            const result = searchTreeById(child, id, idKey, childrenKey);
+            if (result) return result;
+        }
+    }
+    return null;
+}
 </script>
