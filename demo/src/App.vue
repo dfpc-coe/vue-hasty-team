@@ -1,7 +1,7 @@
 <template>
     <div class='d-flex h-full'>
         <div
-            class='card h-full'
+            class='card h-full z-1'
             style='
                 width: 300px;
              '
