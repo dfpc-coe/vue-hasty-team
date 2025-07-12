@@ -10,7 +10,6 @@
                 "border border-blue": dragging
             }'
             style='
-                transform-origin: 0% 0%;
                 height: 100%;
                 width: 100%;
             '
