@@ -29,11 +29,26 @@
                     @dragenter.prevent.stop='over.add(modelValue.self.id)'
                     @dragover.prevent.stop='over.add(modelValue.self.id)'
                     @dragexit.prevent.stop='over.delete(modelValue.self.id)'
-                    @drop.prevent.stop='droppedNode'
+                    @drop.prevent.stop='droppedNode(modelValue.self.id)'
                 >
                     <slot
                         name='block'
                         :node='modelValue.self'
+                        :dragover='over.has(modelValue.self.id)'
+                    />
+                </div>
+            </div>
+            <div class='d-flex align-items-center justify-content-center'>
+                <div
+                    v-for='child in modelValue.children'
+                    @dragenter.prevent.stop='over.add(child.self.id)'
+                    @dragover.prevent.stop='over.add(child.self.id)'
+                    @dragexit.prevent.stop='over.delete(child.self.id)'
+                    @drop.prevent.stop='droppedNode(child.self.id)'
+                >
+                    <slot
+                        name='block'
+                        :node='child'
                         :dragover='over.has(modelValue.self.id)'
                     />
                 </div>
@@ -70,7 +85,11 @@ const props = defineProps({
     }
 });
 
-const emit = defineEmits(['update:modelValue', 'drop']);
+const emit = defineEmits([
+    'update:modelValue',
+    'drop:root',
+    'drop:node'
+]);
 
 const over = ref(new Set());
 
@@ -108,8 +127,10 @@ function wheel(event) {
 /**
  * Fired if something is dropped on a specific node
  */
-function droppedNode() {
+function droppedNode(id) {
+    over.value.delete(id);
     dragging.value = false;
+    emit('drop:node', props.modelValue);
 }
 
 /**
@@ -120,7 +141,20 @@ function droppedRoot() {
     // If there's a child block, its event handlers with .stop should prevent this from firing
     if (!props.modelValue.self) {
         dragging.value = false;
-        emit('drop', props.modelValue);
+        emit('drop:root', props.modelValue);
     }
+}
+
+function searchTreeById(node, id) {
+    if (!node || !node.self) return null;
+    if (node[node.self.id] === id) return node;
+    if (Array.isArray(node[childrenKey])) {
+        for (const child of node[childrenKey]) {
+            const result = searchTreeById(child, id, idKey, childrenKey);
+            if (result) return result;
+        }
+    }
+
+    return null;
 }
 </script>

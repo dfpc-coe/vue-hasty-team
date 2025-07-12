@@ -53,7 +53,8 @@
             <HastyTeam
                 v-model='tree'
                 :debug='true'
-                @drop='modifyTree'
+                @drop:root='modifyTreeRoot($event)'
+                @drop:node='modifyTreeNode($event)'
             >
                 <template #block='blockProps'>
                     <HastyBlock
@@ -117,9 +118,17 @@ function handleDragEnd(event, id) {
     disabled.value.delete(id);
 }
 
-function modifyTree(node) {
-    if (!node.self) {
-        node.self = {
+function modifyTreeNode(node) {
+    node.children.push({
+        id: crypto.randomUUID(),
+        type: dragging.value
+    });
+}
+
+
+function modifyTreeRoot(root) {
+    if (!root.self) {
+        root.self = {
             id: crypto.randomUUID(),
             type: dragging.value
         }
