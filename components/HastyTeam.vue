@@ -117,7 +117,6 @@
             v-if='props.debug'
             class='position-absolute bottom-0 start-0 end-0 mx-3'
         >
-            <pre v-text='over' />
             <pre v-text='JSON.stringify(props.modelValue)' />
         </div>
     </div>
@@ -221,7 +220,6 @@ function dragExitContainer() {
 }
 
 function wheel(event) {
-    console.error('Wheeled', event);
     zoom.value += event.wheelDelta * 0.001
 }
 
@@ -231,7 +229,20 @@ function wheel(event) {
 function droppedNode(id) {
     over.value.delete(id);
     dragging.value = false;
-    emit('drop:node', props.modelValue);
+
+    const node = searchTreeById(props.modelValue, id);
+
+    if (!node) {
+        console.warn(`Node with id ${id} not found in the modelValue`);
+        return;
+    }
+
+    if (node.children.some(child => child.self.id === id)) {
+        // If the node is already a child, we don't need to do anything
+        return;
+    } else {
+        emit('drop:node', node);
+    }
 }
 
 /**
@@ -248,13 +259,13 @@ function droppedRoot() {
 
 function searchTreeById(node, id) {
     if (!node || !node.self) return null;
-    if (node[node.self.id] === id) return node;
-    if (Array.isArray(node[childrenKey])) {
-        for (const child of node[childrenKey]) {
-            const result = searchTreeById(child, id, idKey, childrenKey);
-            if (result) return result;
-        }
+    if (node.self.id === id) return node;
+
+    for (const child of node.children || [] ) {
+        const result = searchTreeById(child, id);
+        if (result) return result;
     }
+
     return null;
 }
 </script>
