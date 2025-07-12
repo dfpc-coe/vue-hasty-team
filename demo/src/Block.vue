@@ -61,6 +61,7 @@ const props = defineProps({
     },
     width: {
         type: Number,
+        default: null
     },
     disabled: {
         type: Boolean,

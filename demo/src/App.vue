@@ -104,7 +104,28 @@ import {
 
 const dragging = ref(null);
 const disabled = ref(new Set());
-const tree = ref({});
+const tree = ref({
+    self: {
+        id: 'root-1',
+        type: 'team'
+    },
+    children: [
+        {
+            self: {
+                id: 'child-1',
+                type: 'user'
+            },
+            children: []
+        },
+        {
+            self: {
+                id: 'child-2', 
+                type: 'user'
+            },
+            children: []
+        }
+    ]
+});
 
 function handleDragStart(event, id) {
     event.dataTransfer.setData('text/plain', id);

@@ -48,8 +48,8 @@
                 >
                     <slot
                         name='block'
-                        :node='child'
-                        :dragover='over.has(modelValue.self.id)'
+                        :node='child.self'
+                        :dragover='over.has(child.self.id)'
                     />
                 </div>
             </div>
@@ -145,16 +145,5 @@ function droppedRoot() {
     }
 }
 
-function searchTreeById(node, id) {
-    if (!node || !node.self) return null;
-    if (node[node.self.id] === id) return node;
-    if (Array.isArray(node[childrenKey])) {
-        for (const child of node[childrenKey]) {
-            const result = searchTreeById(child, id, idKey, childrenKey);
-            if (result) return result;
-        }
-    }
-
-    return null;
-}
+// Removed unused function
 </script>
