@@ -99,16 +99,38 @@
                     v-for='child in modelValue.children'
                     :key='child.self.id'
                     class='mx-3'
-                    @dragenter.prevent.stop='over.add(child.self.id)'
-                    @dragover.prevent.stop='over.add(child.self.id)'
-                    @dragexit.prevent.stop='over.delete(child.self.id)'
-                    @drop.prevent.stop='droppedNode(child.self.id)'
                 >
-                    <slot
-                        name='block'
-                        :node='child.self'
-                        :dragover='over.has(child.self.id)'
-                    />
+                    <!-- Render the child block with drag and drop handlers -->
+                    <div
+                        @dragenter.prevent.stop='over.add(child.self.id)'
+                        @dragover.prevent.stop='over.add(child.self.id)'
+                        @dragexit.prevent.stop='over.delete(child.self.id)'
+                        @drop.prevent.stop='droppedNode(child.self.id)'
+                    >
+                        <slot
+                            name='block'
+                            :node='child.self'
+                            :dragover='over.has(child.self.id)'
+                        />
+                    </div>
+                    
+                    <!-- Recursively render children if this child has any -->
+                    <HastyTeam
+                        v-if='child.children && child.children.length > 0'
+                        :model-value='child'
+                        :debug='props.debug'
+                        @update:model-value='updateChildModelValue(child, $event)'
+                        @drop:root='$emit("drop:root", $event)'
+                        @drop:node='$emit("drop:node", $event)'
+                    >
+                        <template #block='blockProps'>
+                            <slot
+                                name='block'
+                                :node='blockProps.node'
+                                :dragover='blockProps.dragover'
+                            />
+                        </template>
+                    </HastyTeam>
                 </div>
             </div>
         </div>
@@ -124,6 +146,11 @@
 
 <script setup>
 import { onMounted, ref, useTemplateRef, computed } from 'vue';
+
+// Define component name for recursive usage
+defineOptions({
+    name: 'HastyTeam'
+});
 
 const zoom = ref(1);
 const dragging = ref(false);
@@ -267,5 +294,12 @@ function searchTreeById(node, id) {
     }
 
     return null;
+}
+
+function updateChildModelValue(child, newValue) {
+    // Update the child with the new value
+    Object.assign(child, newValue);
+    // Emit the updated model value
+    emit('update:modelValue', props.modelValue);
 }
 </script>
