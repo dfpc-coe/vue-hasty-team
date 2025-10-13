@@ -19,8 +19,6 @@
 
             @dragover.prevent='dragOverContainer'
             @drop.prevent='droppedRoot'
-            @dragenter.prevent='dragEnterContainer'
-            @dragexit.prevent='dragExitContainer'
         >
             <div class='d-flex align-items-center justify-content-center'>
                 <div
@@ -96,8 +94,10 @@
             <div class='d-flex align-items-center justify-content-center'>
                 <div
                     v-for='child in modelValue.children'
+                    :id='child.self.id'
                     :key='child.self.id'
                     class='mx-3'
+                    @dragstart='dragging = child.self.id'
                     @dragenter.prevent.stop='over.add(child.self.id)'
                     @dragover.prevent.stop='over.add(child.self.id)'
                     @dragexit.prevent.stop='over.delete(child.self.id)'
@@ -121,7 +121,7 @@
     </div>
 </template>
 
-<script setup>
+<script setup lang='ts'>
 import { onMounted, ref, useTemplateRef, computed } from 'vue';
 
 const zoom = ref(1);
@@ -158,7 +158,7 @@ const containerWidth = computed(() => {
     return props.modelValue.children.length * (childWidth + spacing) + spacing;
 });
 
-const childrenStartX = computed(() => {
+const childrenStartX = computed<computed>(() => {
     if (props.modelValue.children.length <= 1) return containerWidth.value / 2;
     const childWidth = 300;
     const spacing = 24;
@@ -167,7 +167,7 @@ const childrenStartX = computed(() => {
     return startOffset + childWidth / 2;
 });
 
-const childrenEndX = computed(() => {
+const childrenEndX = computed<number>(() => {
     if (props.modelValue.children.length <= 1) return containerWidth.value / 2;
     const childWidth = 300;
     const spacing = 24;
@@ -210,23 +210,20 @@ function dragOverContainer() {
     // Container receives drag over events
 }
 
-function dragEnterContainer() {
-    dragging.value = true;
-}
-
-function dragExitContainer() {
-    dragging.value = false;
-}
-
 function wheel(event) {
     zoom.value += event.wheelDelta * 0.001
 }
 
 /**
  * Fired if something is dropped on a specific node
+ *
+ * @param id The ID of the node that received the drop
  */
-function droppedNode(id) {
+function droppedNode(id: string) {
     over.value.delete(id);
+
+    const dragged = dragging.value;
+
     dragging.value = false;
 
     const node = searchTreeById(props.modelValue, id);
@@ -236,7 +233,7 @@ function droppedNode(id) {
         return;
     }
 
-    if (node.children.some(child => child.self.id === id)) {
+    if (node.children.some(child => child.self.id === dragged)) {
         // If the node is already a child, we don't need to do anything
         return;
     } else {
