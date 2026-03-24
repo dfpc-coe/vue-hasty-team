@@ -451,7 +451,7 @@ function droppedNode(id: string) {
         // If the node is already a child, we don't need to do anything
         return;
     } else {
-        emit('drop:node', node);
+        emit('drop:node', { node, draggedId: dragged });
     }
 }
 
@@ -462,7 +462,7 @@ function droppedRoot() {
     // Only handle the drop if there's no child block
     // If there's a child block, its event handlers with .stop should prevent this from firing
     if (!normalizedSelf.value) {
-        dragging.value = false;
+        globalDraggingId.value = null;
         emit('drop:root', getModelRoot());
     }
 }

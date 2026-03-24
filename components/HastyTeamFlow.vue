@@ -35,8 +35,8 @@
                     <slot
                         name='block'
                         :node='normalizedSelf'
-                        :dragover='dragging !== normalizedSelf.id && over.has(normalizedSelf.id)'
-                        :dragging-self='dragging === normalizedSelf.id'
+                        :dragover='globalDraggingId !== normalizedSelf.id && over.has(normalizedSelf.id)'
+                        :dragging-self='globalDraggingId === normalizedSelf.id'
                     />
                 </div>
             </div>
@@ -110,8 +110,8 @@
                     class='mx-3'
                     :model-value='child'
                     nested
-                    @dragstart='dragging = child.self.id'
-                    @dragend='dragging = false'
+                    @dragstart.stop='setDragging(child.self.id)'
+                    @dragend='setDragging(null)'
                     @dragenter.prevent.stop='over.add(child.self.id)'
                     @dragover.prevent.stop='over.add(child.self.id)'
                     @dragexit.prevent.stop='over.delete(child.self.id)'
@@ -158,8 +158,8 @@
                 <slot
                     name='block'
                     :node='normalizedSelf'
-                    :dragover='dragging !== normalizedSelf.id && over.has(normalizedSelf.id)'
-                    :dragging-self='dragging === normalizedSelf.id'
+                    :dragover='globalDraggingId !== normalizedSelf.id && over.has(normalizedSelf.id)'
+                    :dragging-self='globalDraggingId === normalizedSelf.id'
                 />
             </div>
         </div>
@@ -223,8 +223,8 @@
                 class='mx-3'
                 :model-value='child'
                 nested
-                @dragstart='dragging = child.self.id'
-                @dragend='dragging = false'
+                @dragstart.stop='setDragging(child.self.id)'
+                @dragend='setDragging(null)'
                 @dragenter.prevent.stop='over.add(child.self.id)'
                 @dragover.prevent.stop='over.add(child.self.id)'
                 @dragexit.prevent.stop='over.delete(child.self.id)'
@@ -246,14 +246,14 @@
 </template>
 
 <script setup lang='ts'>
-import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
+import { computed, inject, onBeforeUnmount, onMounted, provide, ref, useTemplateRef, watch } from 'vue';
+import type { Ref } from 'vue';
 
 defineOptions({
     name: 'HastyTeam'
 });
 
 const zoom = ref(1);
-const dragging = ref(false);
 const isPanning = ref(false);
 const panStartX = ref(0);
 const panStartY = ref(0);
@@ -283,6 +283,20 @@ const emit = defineEmits([
     'drop:root',
     'drop:node'
 ]);
+
+// Provide a single shared dragging ID ref so every nested instance
+// can read/write the same value regardless of tree depth.
+const globalDraggingId: Ref<string | null> = props.nested
+    ? inject<Ref<string | null>>('hastyDraggingId', ref(null))
+    : ref<string | null>(null);
+
+if (!props.nested) {
+    provide('hastyDraggingId', globalDraggingId);
+}
+
+function setDragging(id: string | null) {
+    globalDraggingId.value = id;
+}
 
 const over = ref(new Set());
 const childWidth = 300;
@@ -421,9 +435,9 @@ function wheel(event) {
 function droppedNode(id: string) {
     over.value.delete(id);
 
-    const dragged = dragging.value;
+    const dragged = globalDraggingId.value;
 
-    dragging.value = false;
+    globalDraggingId.value = null;
 
     if (dragged === id) return;
 
@@ -438,7 +452,7 @@ function droppedNode(id: string) {
         // If the node is already a child, we don't need to do anything
         return;
     } else {
-        emit('drop:node', node);
+        emit('drop:node', { node, draggedId: dragged });
     }
 }
 
@@ -449,7 +463,7 @@ function droppedRoot() {
     // Only handle the drop if there's no child block
     // If there's a child block, its event handlers with .stop should prevent this from firing
     if (!normalizedSelf.value) {
-        dragging.value = false;
+        globalDraggingId.value = null;
         emit('drop:root', getModelRoot());
     }
 }

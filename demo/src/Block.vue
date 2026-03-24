@@ -2,47 +2,97 @@
     <div
         class='card'
         :class='{
-            "cursor-move": props.draggable,
+            "cursor-move": props.draggable && !editing,
             "border border-blue": props.dragover && !props.disabled,
         }'
-
         :style='{
             "background-color": props.disabled ? "var(--tblr-gray-100)" : "var(--tblr-white)",
             "width": props.width ? props.width + "px" : "100%",
         }'
-        :draggable='props.draggable'
+        :draggable='props.draggable && !editing'
     >
         <div class='card-header'>
             <IconGripVertical
-                v-if='props.draggable'
+                v-if='props.draggable && !editing'
                 :size='24'
                 stroke='1'
                 class='me-2'
                 color='gray'
             />
+
+            <slot name='icon' />
+
             <span
-                class='card-title'
+                v-if='!editing'
+                class='card-title ms-1'
                 v-text='props.title'
             />
+            <TablerInput
+                v-else
+                v-model='editTitle'
+                placeholder='Title'
+                class='me-2'
+                @keydown.enter='save'
+                @keydown.escape='cancel'
+            />
 
-            <div class='ms-auto'>
-                <slot name='icon' />
+            <div class='ms-auto d-flex align-items-center gap-1'>
+
+                <template v-if='props.node'>
+                    <TablerIconButton
+                        v-if='!editing'
+                        @click.stop='startEdit'
+                    >
+                        <IconPencil
+                            :size='16'
+                            stroke='1'
+                        />
+                    </TablerIconButton>
+                    <TablerIconButton
+                        v-else
+                        @click.stop='save'
+                    >
+                        <IconCheck
+                            :size='16'
+                            stroke='1'
+                        />
+                    </TablerIconButton>
+                </template>
             </div>
         </div>
         <div class='card-body'>
             <div>
-                <p v-text='props.description' />
+                <p
+                    v-if='!editing'
+                    v-text='props.description'
+                />
+                <TablerInput
+                    v-else
+                    v-model='editDescription'
+                    placeholder='Description'
+                    @keydown.enter='save'
+                    @keydown.escape='cancel'
+                />
             </div>
         </div>
     </div>
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import {
-    IconGripVertical
-} from '@tabler/icons-vue'
+    IconGripVertical,
+    IconPencil,
+    IconCheck
+} from '@tabler/icons-vue';
+import TablerIconButton from './TablerIconButton.vue';
+import TablerInput from './TablerInput.vue';
 
 const props = defineProps({
+    node: {
+        type: Object,
+        default: null
+    },
     title: {
         type: String,
         default: 'Title'
@@ -67,5 +117,30 @@ const props = defineProps({
         type: Boolean,
         default: false
     }
-})
+});
+
+const emit = defineEmits(['update:node']);
+
+const editing = ref(false);
+const editTitle = ref('');
+const editDescription = ref('');
+
+function startEdit() {
+    editTitle.value = props.title;
+    editDescription.value = props.description;
+    editing.value = true;
+}
+
+function save() {
+    emit('update:node', {
+        ...props.node,
+        title: editTitle.value,
+        description: editDescription.value
+    });
+    editing.value = false;
+}
+
+function cancel() {
+    editing.value = false;
+}
 </script>

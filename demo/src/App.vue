@@ -62,11 +62,13 @@
                 <template #block='blockProps'>
                     <HastyBlock
                         v-if='blockProps.node.type === "team"'
+                        :node='blockProps.node'
                         :width='300'
                         :dragover='blockProps.dragover'
                         :disabled='blockProps.draggingSelf'
-                        title='New Team'
-                        description='Container for multipe users or equipment'
+                        :title='blockProps.node.title || "New Team"'
+                        :description='blockProps.node.description || "Container for multiple users or equipment"'
+                        @update:node='updateNodeInTree($event)'
                     >
                         <template #icon>
                             <IconUsers
@@ -77,11 +79,13 @@
                     </HastyBlock>
                     <HastyBlock
                         v-else-if='blockProps.node.type === "user"'
+                        :node='blockProps.node'
                         :width='300'
-                        title='New User'
                         :dragover='blockProps.dragover'
                         :disabled='blockProps.draggingSelf'
-                        description='Known or custom individual'
+                        :title='blockProps.node.title || "New User"'
+                        :description='blockProps.node.description || "Known or custom individual"'
+                        @update:node='updateNodeInTree($event)'
                     >
                         <template #icon>
                             <IconUser
@@ -123,14 +127,24 @@ function handleDragEnd(event, id) {
     disabled.value.delete(id);
 }
 
-function modifyTreeNode(node) {
-    node.children.push({
-        self: {
-            id: crypto.randomUUID(),
-            type: dragging.value
-        },
-        children: []
-    });
+function modifyTreeNode({ node, draggedId }) {
+    if (draggedId) {
+        // Move an existing tree node: detach it from wherever it currently lives
+        // then attach it as a child of the target node.
+        const subtree = extractNodeById(tree.value, draggedId);
+        if (subtree) node.children.push(subtree);
+    } else {
+        // Sidebar drop: create a brand-new child node.
+        node.children.push({
+            self: {
+                id: crypto.randomUUID(),
+                type: dragging.value,
+                title: dragging.value === 'team' ? 'New Team' : 'New User',
+                description: dragging.value === 'team' ? 'Container for multiple users or equipment' : 'Known or custom individual'
+            },
+            children: []
+        });
+    }
 }
 
 
@@ -138,9 +152,41 @@ function modifyTreeRoot(root) {
     if (!root.self) {
         root.self = {
             id: crypto.randomUUID(),
-            type: dragging.value
+            type: dragging.value,
+            title: dragging.value === 'team' ? 'New Team' : 'New User',
+            description: dragging.value === 'team' ? 'Container for multiple users or equipment' : 'Known or custom individual'
         }
     }
+}
+
+function updateNodeInTree(updatedNode) {
+    function applyUpdate(node) {
+        if (node.self?.id === updatedNode.id) {
+            node.self = { ...node.self, ...updatedNode };
+            return true;
+        }
+        for (const child of node.children || []) {
+            if (applyUpdate(child)) return true;
+        }
+        return false;
+    }
+    applyUpdate(tree.value);
+}
+
+/**
+ * Remove the node with the given id from the tree and return it.
+ * Returns null if not found.
+ */
+function extractNodeById(root, id) {
+    const children = root.children || [];
+    for (let i = 0; i < children.length; i++) {
+        if (children[i].self?.id === id) {
+            return children.splice(i, 1)[0];
+        }
+        const found = extractNodeById(children[i], id);
+        if (found) return found;
+    }
+    return null;
 }
 
 </script>
