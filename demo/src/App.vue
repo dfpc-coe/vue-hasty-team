@@ -1,9 +1,10 @@
 <template>
-    <div class='d-flex h-full'>
+    <div class='d-flex h-full w-100 overflow-hidden'>
         <div
             class='card h-full z-1'
             style='
                 width: 300px;
+                flex: 0 0 300px;
              '
         >
             <div class='container'>
@@ -46,8 +47,10 @@
 
         <div
             style='
-                width: calc(100% - 300px);
+                flex: 1 1 auto;
+                min-width: 0;
                 height: 100%;
+                overflow: auto;
             '
         >
             <HastyTeam

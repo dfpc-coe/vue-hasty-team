@@ -1,7 +1,8 @@
 <template>
     <div
         ref='wheelContainer'
-        class='h-100 w-100 position-relative d-flex justify-content-center'
+        class='h-100 w-100 position-relative d-flex justify-content-center overflow-auto'
+        style='min-width: 0;'
     >
         <div
             ref='container'
@@ -11,7 +12,8 @@
             }'
             style='
                 height: 100%;
-                width: 100%;
+                width: max-content;
+                min-width: 100%;
             '
             :style='{
                 "transform": `scale(${zoom})`,
@@ -22,23 +24,23 @@
         >
             <div class='d-flex align-items-center justify-content-center'>
                 <div
-                    v-if='modelValue.self'
-                    @dragenter.prevent.stop='over.add(modelValue.self.id)'
-                    @dragover.prevent.stop='over.add(modelValue.self.id)'
-                    @dragexit.prevent.stop='over.delete(modelValue.self.id)'
-                    @drop.prevent.stop='droppedNode(modelValue.self.id)'
+                    v-if='normalizedSelf'
+                    @dragenter.prevent.stop='over.add(normalizedSelf.id)'
+                    @dragover.prevent.stop='over.add(normalizedSelf.id)'
+                    @dragexit.prevent.stop='over.delete(normalizedSelf.id)'
+                    @drop.prevent.stop='droppedNode(normalizedSelf.id)'
                 >
                     <slot
                         name='block'
-                        :node='modelValue.self'
-                        :dragover='over.has(modelValue.self.id)'
+                        :node='normalizedSelf'
+                        :dragover='over.has(normalizedSelf.id)'
                     />
                 </div>
             </div>
 
             <!-- Arrow connections between parent and children -->
             <div
-                v-if='modelValue.self && modelValue.children.length > 0'
+                v-if='normalizedSelf && normalizedChildren.length > 0'
                 class='d-flex align-items-center justify-content-center position-relative'
                 style='height: 60px; margin: 20px 0;'
             >
@@ -60,7 +62,7 @@
 
                     <!-- Horizontal line connecting to all children -->
                     <line
-                        v-if='modelValue.children.length > 1'
+                        v-if='normalizedChildren.length > 1'
                         :x1='childrenStartX'
                         y1='30'
                         :x2='childrenEndX'
@@ -71,7 +73,7 @@
 
                     <!-- Vertical lines to each child -->
                     <line
-                        v-for='(child, index) in modelValue.children'
+                        v-for='(child, index) in normalizedChildren'
                         :key='child.self.id'
                         :x1='getChildLineX(index)'
                         y1='30'
@@ -83,7 +85,7 @@
 
                     <!-- Arrow heads pointing to children -->
                     <polygon
-                        v-for='(child, index) in modelValue.children'
+                        v-for='(child, index) in normalizedChildren'
                         :key='child.self.id + "-arrow"'
                         :points='getArrowPoints(index)'
                         fill='#6c757d'
@@ -91,24 +93,34 @@
                 </svg>
             </div>
 
-            <div class='d-flex align-items-center justify-content-center'>
-                <div
-                    v-for='child in modelValue.children'
+            <div
+                class='d-flex align-items-center justify-content-center'
+                :style='{
+                    width: `${containerWidth}px`
+                }'
+            >
+                <HastyTeam
+                    v-for='child in normalizedChildren'
                     :id='child.self.id'
                     :key='child.self.id'
                     class='mx-3'
+                    :model-value='child'
                     @dragstart='dragging = child.self.id'
                     @dragenter.prevent.stop='over.add(child.self.id)'
                     @dragover.prevent.stop='over.add(child.self.id)'
                     @dragexit.prevent.stop='over.delete(child.self.id)'
                     @drop.prevent.stop='droppedNode(child.self.id)'
+                    @drop:root='forwardDropRoot'
+                    @drop:node='forwardDropNode'
                 >
-                    <slot
-                        name='block'
-                        :node='child.self'
-                        :dragover='over.has(child.self.id)'
-                    />
-                </div>
+                    <template #block='blockProps'>
+                        <slot
+                            name='block'
+                            :node='blockProps.node'
+                            :dragover='blockProps.dragover'
+                        />
+                    </template>
+                </HastyTeam>
             </div>
         </div>
 
@@ -122,7 +134,11 @@
 </template>
 
 <script setup lang='ts'>
-import { onMounted, ref, useTemplateRef, computed } from 'vue';
+import { computed, onMounted, ref, useTemplateRef, watch } from 'vue';
+
+defineOptions({
+    name: 'HastyTeam'
+});
 
 const zoom = ref(1);
 const dragging = ref(false);
@@ -148,41 +164,46 @@ const emit = defineEmits([
 ]);
 
 const over = ref(new Set());
+const childWidth = 300;
+const childMarginX = 16;
+const childOuterWidth = childWidth + childMarginX * 2;
+const normalizedSelf = computed(() => props.modelValue?.self ?? null);
+const normalizedChildren = computed(() => Array.isArray(props.modelValue?.children) ? props.modelValue.children : []);
+
+watch(
+    () => props.modelValue,
+    (value) => {
+        if (hasValidModelShape(value)) return;
+
+        emit('update:modelValue', normalizeModel(value));
+    },
+    {
+        immediate: true
+    }
+);
 
 // Computed properties for arrow positioning
 const containerWidth = computed(() => {
-    if (!props.modelValue.children.length) return 400;
-    // Calculate width based on number of children and spacing
-    const childWidth = 300; // Assuming each block is 300px wide
-    const spacing = 24; // 12px margin on each side
-    return props.modelValue.children.length * (childWidth + spacing) + spacing;
+    if (!normalizedChildren.value.length) return 400;
+
+    return normalizedChildren.value.length * childOuterWidth;
 });
 
-const childrenStartX = computed<computed>(() => {
-    if (props.modelValue.children.length <= 1) return containerWidth.value / 2;
-    const childWidth = 300;
-    const spacing = 24;
-    const totalChildrenWidth = props.modelValue.children.length * childWidth + (props.modelValue.children.length - 1) * spacing;
-    const startOffset = (containerWidth.value - totalChildrenWidth) / 2;
-    return startOffset + childWidth / 2;
+const childrenStartX = computed<number>(() => {
+    if (normalizedChildren.value.length <= 1) return containerWidth.value / 2;
+
+    return childMarginX + childWidth / 2;
 });
 
 const childrenEndX = computed<number>(() => {
-    if (props.modelValue.children.length <= 1) return containerWidth.value / 2;
-    const childWidth = 300;
-    const spacing = 24;
-    const totalChildrenWidth = props.modelValue.children.length * childWidth + (props.modelValue.children.length - 1) * spacing;
-    const startOffset = (containerWidth.value - totalChildrenWidth) / 2;
-    return startOffset + totalChildrenWidth - childWidth / 2;
+    if (normalizedChildren.value.length <= 1) return containerWidth.value / 2;
+
+    return getChildLineX(normalizedChildren.value.length - 1);
 });
 
 // Methods for arrow positioning
 function getChildLineX(index) {
-    const childWidth = 300;
-    const spacing = 24;
-    const totalChildrenWidth = props.modelValue.children.length * childWidth + (props.modelValue.children.length - 1) * spacing;
-    const startOffset = (containerWidth.value - totalChildrenWidth) / 2;
-    return startOffset + index * (childWidth + spacing) + childWidth / 2;
+    return childMarginX + childWidth / 2 + index * childOuterWidth;
 }
 
 function getArrowPoints(index) {
@@ -194,16 +215,9 @@ function getArrowPoints(index) {
 
 onMounted(() => {
     if (!containerRef.value) throw new Error('Container element not found');
-    if (!containerRef.value) throw new Error('WheelContainer element not found');
+    if (!wheelContainerRef.value) throw new Error('WheelContainer element not found');
 
     wheelContainerRef.value.addEventListener('wheel', wheel);
-
-    if (!props.modelValue.self && !props.modelValue.children) {
-        emit('update:modelValue', {
-            self: null,
-            children: [],
-        });
-    }
 });
 
 function dragOverContainer() {
@@ -226,7 +240,7 @@ function droppedNode(id: string) {
 
     dragging.value = false;
 
-    const node = searchTreeById(props.modelValue, id);
+    const node = searchTreeById(getModelRoot(), id);
 
     if (!node) {
         console.warn(`Node with id ${id} not found in the modelValue`);
@@ -247,10 +261,18 @@ function droppedNode(id: string) {
 function droppedRoot() {
     // Only handle the drop if there's no child block
     // If there's a child block, its event handlers with .stop should prevent this from firing
-    if (!props.modelValue.self) {
+    if (!normalizedSelf.value) {
         dragging.value = false;
-        emit('drop:root', props.modelValue);
+        emit('drop:root', getModelRoot());
     }
+}
+
+function forwardDropRoot(node) {
+    emit('drop:root', node);
+}
+
+function forwardDropNode(node) {
+    emit('drop:node', node);
 }
 
 function searchTreeById(node, id) {
@@ -263,5 +285,22 @@ function searchTreeById(node, id) {
     }
 
     return null;
+}
+
+function hasValidModelShape(value) {
+    return Boolean(value) && typeof value === 'object' && 'self' in value && Array.isArray(value.children);
+}
+
+function getModelRoot() {
+    return hasValidModelShape(props.modelValue)
+        ? props.modelValue
+        : normalizeModel(props.modelValue);
+}
+
+function normalizeModel(value) {
+    return {
+        self: value?.self ?? null,
+        children: Array.isArray(value?.children) ? value.children : [],
+    };
 }
 </script>
