@@ -1,30 +1,33 @@
 <template>
+    <!-- Root canvas wrapper (only at the top level) -->
     <div
+        v-if='!props.nested'
         ref='wheelContainer'
         class='h-100 w-100 position-relative d-flex justify-content-center overflow-auto'
-        style='min-width: 0;'
+        :style='{
+            minWidth: "0",
+            cursor: isPanning ? "grabbing" : "grab",
+            userSelect: isPanning ? "none" : "auto"
+        }'
+        @mousedown='startPan'
     >
         <div
             ref='container'
             class='px-4 py-4'
-            :class='{
-                "border border-blue": dragging
-            }'
+            :class='{ "border border-blue": dragging }'
             style='
                 height: 100%;
                 width: max-content;
                 min-width: 100%;
             '
-            :style='{
-                "transform": `scale(${zoom})`,
-            }'
-
+            :style='{ "transform": `scale(${zoom})` }'
             @dragover.prevent='dragOverContainer'
             @drop.prevent='droppedRoot'
         >
             <div class='d-flex align-items-center justify-content-center'>
                 <div
                     v-if='normalizedSelf'
+                    @mousedown.stop
                     @dragenter.prevent.stop='over.add(normalizedSelf.id)'
                     @dragover.prevent.stop='over.add(normalizedSelf.id)'
                     @dragexit.prevent.stop='over.delete(normalizedSelf.id)'
@@ -33,7 +36,8 @@
                     <slot
                         name='block'
                         :node='normalizedSelf'
-                        :dragover='over.has(normalizedSelf.id)'
+                        :dragover='dragging !== normalizedSelf.id && over.has(normalizedSelf.id)'
+                        :dragging-self='dragging === normalizedSelf.id'
                     />
                 </div>
             </div>
@@ -94,7 +98,7 @@
             </div>
 
             <div
-                class='d-flex align-items-center justify-content-center'
+                class='d-flex align-items-start justify-content-center'
                 :style='{
                     width: `${containerWidth}px`
                 }'
@@ -105,7 +109,9 @@
                     :key='child.self.id'
                     class='mx-3'
                     :model-value='child'
+                    nested
                     @dragstart='dragging = child.self.id'
+                    @dragend='dragging = false'
                     @dragenter.prevent.stop='over.add(child.self.id)'
                     @dragover.prevent.stop='over.add(child.self.id)'
                     @dragexit.prevent.stop='over.delete(child.self.id)'
@@ -118,6 +124,7 @@
                             name='block'
                             :node='blockProps.node'
                             :dragover='blockProps.dragover'
+                            :dragging-self='blockProps.draggingSelf'
                         />
                     </template>
                 </HastyTeam>
@@ -131,10 +138,116 @@
             <pre v-text='JSON.stringify(props.modelValue)' />
         </div>
     </div>
+
+    <!-- Nested child wrapper — natural sizing, no scroll/zoom/pan -->
+    <div
+        v-else
+        :class='{ "border border-blue": dragging }'
+        @mousedown.stop
+        @dragover.prevent='dragOverContainer'
+        @drop.prevent='droppedRoot'
+    >
+        <div class='d-flex align-items-center justify-content-center'>
+            <div
+                v-if='normalizedSelf'
+                @mousedown.stop
+                @dragenter.prevent.stop='over.add(normalizedSelf.id)'
+                @dragover.prevent.stop='over.add(normalizedSelf.id)'
+                @dragexit.prevent.stop='over.delete(normalizedSelf.id)'
+                @drop.prevent.stop='droppedNode(normalizedSelf.id)'
+            >
+                <slot
+                    name='block'
+                    :node='normalizedSelf'
+                    :dragover='dragging !== normalizedSelf.id && over.has(normalizedSelf.id)'
+                    :dragging-self='dragging === normalizedSelf.id'
+                />
+            </div>
+        </div>
+
+        <!-- Arrow connections between parent and children -->
+        <div
+            v-if='normalizedSelf && normalizedChildren.length > 0'
+            class='d-flex align-items-center justify-content-center position-relative'
+            style='height: 60px; margin: 20px 0;'
+        >
+            <svg
+                :width='containerWidth'
+                :height='60'
+                class='position-absolute'
+                style='top: 0; left: 50%; transform: translateX(-50%);'
+            >
+                <line
+                    :x1='containerWidth / 2'
+                    y1='0'
+                    :x2='containerWidth / 2'
+                    y2='30'
+                    stroke='#6c757d'
+                    stroke-width='2'
+                />
+                <line
+                    v-if='normalizedChildren.length > 1'
+                    :x1='childrenStartX'
+                    y1='30'
+                    :x2='childrenEndX'
+                    y2='30'
+                    stroke='#6c757d'
+                    stroke-width='2'
+                />
+                <line
+                    v-for='(child, index) in normalizedChildren'
+                    :key='child.self.id'
+                    :x1='getChildLineX(index)'
+                    y1='30'
+                    :x2='getChildLineX(index)'
+                    y2='60'
+                    stroke='#6c757d'
+                    stroke-width='2'
+                />
+                <polygon
+                    v-for='(child, index) in normalizedChildren'
+                    :key='child.self.id + "-arrow"'
+                    :points='getArrowPoints(index)'
+                    fill='#6c757d'
+                />
+            </svg>
+        </div>
+
+        <div
+            class='d-flex align-items-start justify-content-center'
+            :style='{ width: `${containerWidth}px` }'
+        >
+            <HastyTeam
+                v-for='child in normalizedChildren'
+                :id='child.self.id'
+                :key='child.self.id'
+                class='mx-3'
+                :model-value='child'
+                nested
+                @dragstart='dragging = child.self.id'
+                @dragend='dragging = false'
+                @dragenter.prevent.stop='over.add(child.self.id)'
+                @dragover.prevent.stop='over.add(child.self.id)'
+                @dragexit.prevent.stop='over.delete(child.self.id)'
+                @drop.prevent.stop='droppedNode(child.self.id)'
+                @drop:root='forwardDropRoot'
+                @drop:node='forwardDropNode'
+            >
+                <template #block='blockProps'>
+                    <slot
+                        name='block'
+                        :node='blockProps.node'
+                        :dragover='blockProps.dragover'
+                        :dragging-self='blockProps.draggingSelf'
+                    />
+                </template>
+            </HastyTeam>
+        </div>
+    </div>
 </template>
 
 <script setup lang='ts'>
-import { computed, onMounted, ref, useTemplateRef, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
 
 defineOptions({
     name: 'HastyTeam'
@@ -142,6 +255,11 @@ defineOptions({
 
 const zoom = ref(1);
 const dragging = ref(false);
+const isPanning = ref(false);
+const panStartX = ref(0);
+const panStartY = ref(0);
+const panScrollLeft = ref(0);
+const panScrollTop = ref(0);
 
 const wheelContainerRef = useTemplateRef('wheelContainer');
 const containerRef = useTemplateRef('container');
@@ -152,6 +270,10 @@ const props = defineProps({
         required: true
     },
     debug: {
+        type: Boolean,
+        default: false
+    },
+    nested: {
         type: Boolean,
         default: false
     }
@@ -214,14 +336,62 @@ function getArrowPoints(index) {
 }
 
 onMounted(() => {
+    if (props.nested) return;
+
     if (!containerRef.value) throw new Error('Container element not found');
     if (!wheelContainerRef.value) throw new Error('WheelContainer element not found');
 
     wheelContainerRef.value.addEventListener('wheel', wheel);
 });
 
+onBeforeUnmount(() => {
+    if (props.nested) return;
+
+    if (wheelContainerRef.value) {
+        wheelContainerRef.value.removeEventListener('wheel', wheel);
+    }
+
+    window.removeEventListener('mousemove', pan);
+    window.removeEventListener('mouseup', endPan);
+    window.removeEventListener('mouseleave', endPan);
+});
+
 function dragOverContainer() {
     // Container receives drag over events
+}
+
+function startPan(event: MouseEvent) {
+    if (event.button !== 0) return;
+    if (!wheelContainerRef.value) return;
+
+    isPanning.value = true;
+    panStartX.value = event.clientX;
+    panStartY.value = event.clientY;
+    panScrollLeft.value = wheelContainerRef.value.scrollLeft;
+    panScrollTop.value = wheelContainerRef.value.scrollTop;
+
+    window.addEventListener('mousemove', pan);
+    window.addEventListener('mouseup', endPan);
+    window.addEventListener('mouseleave', endPan);
+}
+
+function pan(event: MouseEvent) {
+    if (!isPanning.value || !wheelContainerRef.value) return;
+
+    const deltaX = event.clientX - panStartX.value;
+    const deltaY = event.clientY - panStartY.value;
+
+    wheelContainerRef.value.scrollLeft = panScrollLeft.value - deltaX;
+    wheelContainerRef.value.scrollTop = panScrollTop.value - deltaY;
+}
+
+function endPan() {
+    if (!isPanning.value) return;
+
+    isPanning.value = false;
+    window.removeEventListener('mousemove', pan);
+    window.removeEventListener('mouseup', endPan);
+    window.removeEventListener('mouseleave', endPan);
 }
 
 function wheel(event) {
@@ -239,6 +409,8 @@ function droppedNode(id: string) {
     const dragged = dragging.value;
 
     dragging.value = false;
+
+    if (dragged === id) return;
 
     const node = searchTreeById(getModelRoot(), id);
 
