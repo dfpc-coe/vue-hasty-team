@@ -14,7 +14,6 @@
         <div
             ref='container'
             class='px-4 py-4'
-            :class='{ "border border-blue": dragging }'
             style='
                 height: 100%;
                 width: max-content;
@@ -36,8 +35,8 @@
                     <slot
                         name='block'
                         :node='normalizedSelf'
-                        :dragover='dragging !== normalizedSelf.id && over.has(normalizedSelf.id)'
-                        :dragging-self='dragging === normalizedSelf.id'
+                        :dragover='globalDraggingId !== normalizedSelf.id && over.has(normalizedSelf.id)'
+                        :dragging-self='globalDraggingId === normalizedSelf.id'
                     />
                 </div>
             </div>
@@ -99,7 +98,7 @@
 
             <div
                 class='d-flex align-items-start justify-content-center'
-                :style='{ width: `${containerWidth}px` }'
+                :style='{ width: `${containerWidth}px`, margin: "0 auto" }'
             >
                 <HastyTeam
                     v-for='child in normalizedChildren'
@@ -108,8 +107,8 @@
                     class='mx-3'
                     :model-value='child'
                     nested
-                    @dragstart='dragging = child.self.id'
-                    @dragend='dragging = false'
+                    @dragstart.stop='setDragging(child.self.id)'
+                    @dragend='setDragging(null)'
                     @dragenter.prevent.stop='over.add(child.self.id)'
                     @dragover.prevent.stop='over.add(child.self.id)'
                     @dragexit.prevent.stop='over.delete(child.self.id)'
@@ -140,7 +139,6 @@
     <!-- Nested child wrapper — natural sizing, no scroll/zoom/pan -->
     <div
         v-else
-        :class='{ "border border-blue": dragging }'
         @mousedown.stop
         @dragover.prevent='dragOverContainer'
         @drop.prevent='droppedRoot'
@@ -157,8 +155,8 @@
                 <slot
                     name='block'
                     :node='normalizedSelf'
-                    :dragover='dragging !== normalizedSelf.id && over.has(normalizedSelf.id)'
-                    :dragging-self='dragging === normalizedSelf.id'
+                    :dragover='globalDraggingId !== normalizedSelf.id && over.has(normalizedSelf.id)'
+                    :dragging-self='globalDraggingId === normalizedSelf.id'
                 />
             </div>
         </div>
@@ -213,7 +211,7 @@
 
         <div
             class='d-flex align-items-start justify-content-center'
-            :style='{ width: `${containerWidth}px` }'
+            :style='{ width: `${containerWidth}px`, margin: "0 auto" }'
         >
             <HastyTeam
                 v-for='child in normalizedChildren'
@@ -222,8 +220,8 @@
                 class='mx-3'
                 :model-value='child'
                 nested
-                @dragstart='dragging = child.self.id'
-                @dragend='dragging = false'
+                @dragstart.stop='setDragging(child.self.id)'
+                @dragend='setDragging(null)'
                 @dragenter.prevent.stop='over.add(child.self.id)'
                 @dragover.prevent.stop='over.add(child.self.id)'
                 @dragexit.prevent.stop='over.delete(child.self.id)'
@@ -245,14 +243,14 @@
 </template>
 
 <script setup lang='ts'>
-import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue';
+import { computed, inject, onBeforeUnmount, onMounted, provide, ref, useTemplateRef, watch } from 'vue';
+import type { Ref } from 'vue';
 
 defineOptions({
     name: 'HastyTeam'
 });
 
 const zoom = ref(1);
-const dragging = ref(false);
 const isPanning = ref(false);
 const panStartX = ref(0);
 const panStartY = ref(0);
@@ -285,6 +283,20 @@ const emit = defineEmits([
     'drop:node'
 ]);
 
+// Provide a single shared dragging ID ref so every nested instance
+// can read/write the same value regardless of tree depth.
+const globalDraggingId: Ref<string | null> = props.nested
+    ? inject<Ref<string | null>>('hastyDraggingId', ref(null))
+    : ref<string | null>(null);
+
+if (!props.nested) {
+    provide('hastyDraggingId', globalDraggingId);
+}
+
+function setDragging(id: string | null) {
+    globalDraggingId.value = id;
+}
+
 const over = ref(new Set());
 const childWidth = 300;
 const childMarginX = 16;
@@ -305,28 +317,44 @@ watch(
 );
 
 // Computed properties for arrow positioning
-const containerWidth = computed(() => {
-    if (!normalizedChildren.value.length) return 400;
 
-    return normalizedChildren.value.length * childOuterWidth;
+/**
+ * Recursively compute the total pixel width a subtree occupies.
+ * A leaf node occupies childOuterWidth; a node with children occupies
+ * the sum of its children's subtree widths.
+ */
+function getSubtreeWidth(node): number {
+    const children = Array.isArray(node?.children) ? node.children : [];
+    if (children.length === 0) return childOuterWidth;
+    return children.reduce((sum, child) => sum + getSubtreeWidth(child), 0);
+}
+
+const childSubtreeWidths = computed<number[]>(() =>
+    normalizedChildren.value.map((child) => getSubtreeWidth(child))
+);
+
+const containerWidth = computed(() => {
+    if (!normalizedChildren.value.length) return childOuterWidth;
+    return childSubtreeWidths.value.reduce((sum, w) => sum + w, 0);
 });
+
+// Methods for arrow positioning
+function getChildLineX(index: number): number {
+    const widths = childSubtreeWidths.value;
+    let offset = 0;
+    for (let i = 0; i < index; i++) offset += widths[i];
+    return offset + widths[index] / 2;
+}
 
 const childrenStartX = computed<number>(() => {
     if (normalizedChildren.value.length <= 1) return containerWidth.value / 2;
-
-    return childMarginX + childWidth / 2;
+    return getChildLineX(0);
 });
 
 const childrenEndX = computed<number>(() => {
     if (normalizedChildren.value.length <= 1) return containerWidth.value / 2;
-
     return getChildLineX(normalizedChildren.value.length - 1);
 });
-
-// Methods for arrow positioning
-function getChildLineX(index) {
-    return childMarginX + childWidth / 2 + index * childOuterWidth;
-}
 
 function getArrowPoints(index) {
     const x = getChildLineX(index);
@@ -405,9 +433,9 @@ function wheel(event) {
 function droppedNode(id: string) {
     over.value.delete(id);
 
-    const dragged = dragging.value;
+    const dragged = globalDraggingId.value;
 
-    dragging.value = false;
+    globalDraggingId.value = null;
 
     // Ignore drops on the node being dragged
     if (dragged === id) return;

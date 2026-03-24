@@ -14,7 +14,6 @@
         <div
             ref='container'
             class='px-4 py-4'
-            :class='{ "border border-blue": dragging }'
             style='
                 height: 100%;
                 width: max-content;
@@ -100,7 +99,8 @@
             <div
                 class='d-flex align-items-start justify-content-center'
                 :style='{
-                    width: `${containerWidth}px`
+                    width: `${containerWidth}px`,
+                    margin: "0 auto"
                 }'
             >
                 <HastyTeam
@@ -142,7 +142,6 @@
     <!-- Nested child wrapper — natural sizing, no scroll/zoom/pan -->
     <div
         v-else
-        :class='{ "border border-blue": dragging }'
         @mousedown.stop
         @dragover.prevent='dragOverContainer'
         @drop.prevent='droppedRoot'
@@ -215,7 +214,7 @@
 
         <div
             class='d-flex align-items-start justify-content-center'
-            :style='{ width: `${containerWidth}px` }'
+            :style='{ width: `${containerWidth}px`, margin: "0 auto" }'
         >
             <HastyTeam
                 v-for='child in normalizedChildren'
@@ -305,28 +304,44 @@ watch(
 );
 
 // Computed properties for arrow positioning
-const containerWidth = computed(() => {
-    if (!normalizedChildren.value.length) return 400;
 
-    return normalizedChildren.value.length * childOuterWidth;
+/**
+ * Recursively compute the total pixel width a subtree occupies.
+ * A leaf node occupies childOuterWidth; a node with children occupies
+ * the sum of its children's subtree widths.
+ */
+function getSubtreeWidth(node): number {
+    const children = Array.isArray(node?.children) ? node.children : [];
+    if (children.length === 0) return childOuterWidth;
+    return children.reduce((sum, child) => sum + getSubtreeWidth(child), 0);
+}
+
+const childSubtreeWidths = computed<number[]>(() =>
+    normalizedChildren.value.map((child) => getSubtreeWidth(child))
+);
+
+const containerWidth = computed(() => {
+    if (!normalizedChildren.value.length) return childOuterWidth;
+    return childSubtreeWidths.value.reduce((sum, w) => sum + w, 0);
 });
+
+// Methods for arrow positioning
+function getChildLineX(index: number): number {
+    const widths = childSubtreeWidths.value;
+    let offset = 0;
+    for (let i = 0; i < index; i++) offset += widths[i];
+    return offset + widths[index] / 2;
+}
 
 const childrenStartX = computed<number>(() => {
     if (normalizedChildren.value.length <= 1) return containerWidth.value / 2;
-
-    return childMarginX + childWidth / 2;
+    return getChildLineX(0);
 });
 
 const childrenEndX = computed<number>(() => {
     if (normalizedChildren.value.length <= 1) return containerWidth.value / 2;
-
     return getChildLineX(normalizedChildren.value.length - 1);
 });
-
-// Methods for arrow positioning
-function getChildLineX(index) {
-    return childMarginX + childWidth / 2 + index * childOuterWidth;
-}
 
 function getArrowPoints(index) {
     const x = getChildLineX(index);
