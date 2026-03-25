@@ -27,6 +27,7 @@
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
+        "@tak-ps/vue-tabler": "^4.10.0",
         "@typescript-eslint/parser": "^8.8.1",
         "@vitejs/plugin-vue": "^6.0.0",
         "eslint": "^10.0.0",

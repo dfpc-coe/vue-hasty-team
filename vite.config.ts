@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
             vue(),
         ],
         optimizeDeps: {
-            include: [],
+            include: ["showdown", "@tak-ps/vue-tabler"],
         },
         build: {},
     }

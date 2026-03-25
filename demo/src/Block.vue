@@ -10,6 +10,7 @@
             "width": props.width ? props.width + "px" : "100%",
         }'
         :draggable='props.draggable && !editing'
+        @keydown.escape='cancel'
     >
         <div class='card-header'>
             <IconGripVertical
@@ -32,8 +33,7 @@
                 v-model='editTitle'
                 placeholder='Title'
                 class='me-2'
-                @keydown.enter='save'
-                @keydown.escape='cancel'
+                @submit='save'
             />
 
             <div class='ms-auto d-flex align-items-center gap-1'>
@@ -41,6 +41,7 @@
                 <template v-if='props.node'>
                     <TablerIconButton
                         v-if='!editing'
+                        title='Edit'
                         @click.stop='startEdit'
                     >
                         <IconPencil
@@ -50,6 +51,7 @@
                     </TablerIconButton>
                     <TablerIconButton
                         v-else
+                        title='Save'
                         @click.stop='save'
                     >
                         <IconCheck
@@ -70,8 +72,7 @@
                     v-else
                     v-model='editDescription'
                     placeholder='Description'
-                    @keydown.enter='save'
-                    @keydown.escape='cancel'
+                    @submit='save'
                 />
             </div>
         </div>
@@ -85,8 +86,7 @@ import {
     IconPencil,
     IconCheck
 } from '@tabler/icons-vue';
-import TablerIconButton from './TablerIconButton.vue';
-import TablerInput from './TablerInput.vue';
+import { TablerIconButton, TablerInput } from '@tak-ps/vue-tabler';
 
 const props = defineProps({
     node: {
