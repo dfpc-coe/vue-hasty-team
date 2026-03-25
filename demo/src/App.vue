@@ -69,6 +69,7 @@
                         :title='blockProps.node.title || "New Team"'
                         :description='blockProps.node.description || "Container for multiple users or equipment"'
                         @update:node='updateNodeInTree($event)'
+                        @delete:node='deleteNode($event)'
                     >
                         <template #icon>
                             <IconUsers
@@ -86,6 +87,7 @@
                         :title='blockProps.node.title || "New User"'
                         :description='blockProps.node.description || "Known or custom individual"'
                         @update:node='updateNodeInTree($event)'
+                        @delete:node='deleteNode($event)'
                     >
                         <template #icon>
                             <IconUser
@@ -187,6 +189,17 @@ function extractNodeById(root, id) {
         if (found) return found;
     }
     return null;
+}
+
+function deleteNode(node) {
+    const id = node.id ?? node.self?.id;
+    if (!id) return;
+    // If the deleted node is the root, clear the tree
+    if (tree.value.self?.id === id) {
+        tree.value = {};
+        return;
+    }
+    extractNodeById(tree.value, id);
 }
 
 </script>

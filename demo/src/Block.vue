@@ -59,6 +59,12 @@
                             stroke='1'
                         />
                     </TablerIconButton>
+                    <TablerDelete
+                        v-if='!editing'
+                        displaytype='icon'
+                        :size='16'
+                        @delete='emit("delete:node", props.node)'
+                    />
                 </template>
             </div>
         </div>
@@ -86,7 +92,7 @@ import {
     IconPencil,
     IconCheck
 } from '@tabler/icons-vue';
-import { TablerIconButton, TablerInput } from '@tak-ps/vue-tabler';
+import { TablerIconButton, TablerInput, TablerDelete } from '@tak-ps/vue-tabler';
 
 const props = defineProps({
     node: {
@@ -119,7 +125,7 @@ const props = defineProps({
     }
 });
 
-const emit = defineEmits(['update:node']);
+const emit = defineEmits(['update:node', 'delete:node']);
 
 const editing = ref(false);
 const editTitle = ref('');
