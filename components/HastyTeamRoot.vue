@@ -128,6 +128,34 @@
             </div>
         </div>
 
+        <!-- Floating button bar -->
+        <div
+            class='position-absolute top-0 end-0 p-2 d-flex gap-2 align-items-center'
+            style='z-index: 10;'
+            @mousedown.stop
+        >
+            <slot name='controls'>
+                <TablerIconButton
+                    title='Zoom in'
+                    @click.stop='zoom = Math.min(zoom + 0.1, 3)'
+                >
+                    <IconZoomIn :size='32' stroke='1' />
+                </TablerIconButton>
+                <TablerIconButton
+                    title='Reset view'
+                    @click.stop='resetView'
+                >
+                    <IconFocusCentered :size='32' stroke='1' />
+                </TablerIconButton>
+                <TablerIconButton
+                    title='Zoom out'
+                    @click.stop='zoom = Math.max(zoom - 0.1, 0.2)'
+                >
+                    <IconZoomOut :size='32' stroke='1' />
+                </TablerIconButton>
+            </slot>
+        </div>
+
         <div
             v-if='props.debug'
             class='position-absolute bottom-0 start-0 end-0 mx-3'
@@ -245,6 +273,8 @@
 <script setup lang='ts'>
 import { computed, inject, onBeforeUnmount, onMounted, provide, ref, useTemplateRef, watch } from 'vue';
 import type { Ref } from 'vue';
+import { TablerIconButton } from '@tak-ps/vue-tabler';
+import { IconZoomIn, IconZoomOut, IconFocusCentered } from '@tabler/icons-vue';
 
 defineOptions({
     name: 'HastyTeam'
@@ -423,6 +453,12 @@ function endPan() {
 
 function wheel(event) {
     zoom.value += event.wheelDelta * 0.001
+}
+
+function resetView() {
+    zoom.value = 1;
+    panX.value = 0;
+    panY.value = 0;
 }
 
 /**
